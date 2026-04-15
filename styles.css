@@ -560,7 +560,7 @@ body::before {
 
 .item {
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr auto auto;
   align-items: center;
   gap: 0.65rem;
   padding: 0.62rem 0.72rem;
@@ -603,6 +603,40 @@ body::before {
 .item.done .item-title {
   text-decoration: line-through;
   opacity: 0.75;
+}
+
+.item.favorite .item-title {
+  color: #ffe7a8;
+}
+
+.item.skipped-today {
+  opacity: 0.85;
+}
+
+.quick-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.quick-action {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 0.24rem 0.5rem;
+  font: 600 0.72rem/1 "Inter", sans-serif;
+  cursor: pointer;
+}
+
+.quick-action:hover {
+  border-color: rgba(255, 203, 61, 0.6);
+}
+
+.quick-action.active {
+  background: rgba(255, 203, 61, 0.24);
+  border-color: rgba(255, 203, 61, 0.7);
 }
 
 .platform {
@@ -720,6 +754,16 @@ body::before {
 
   .list {
     max-height: 350px;
+  }
+
+  .item {
+    grid-template-columns: auto 1fr;
+  }
+
+  .quick-actions,
+  .platform {
+    grid-column: 2;
+    justify-self: start;
   }
 }
 

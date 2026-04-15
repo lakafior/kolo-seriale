@@ -4,6 +4,8 @@
   const TWO_PI = Math.PI * 2;
   const POINTER_ANGLE = -Math.PI / 2; // góra
   const STORAGE_KEY = "koloSerialeWatched:v1";
+  const FAVORITES_STORAGE_KEY = "koloSerialeFavorites:v1";
+  const SKIPPED_TODAY_STORAGE_KEY = "koloSerialeSkippedToday:v1";
   const SHOWS_STORAGE_KEY = "koloSerialeShows:v1";
   const CANONICAL_GENRES = [
     "komediowe",
@@ -20,7 +22,11 @@
     shows: [],
     fileShows: [],
     watched: new Set(),
+    favorites: new Set(),
+    skippedToday: new Set(),
     onlyUnwatched: true,
+    onlyFavorites: false,
+    hideSkippedToday: true,
     genreFilter: "all",
     decadeFilter: "all",
     titleQuery: "",
@@ -34,6 +40,8 @@
     spinBtn: document.getElementById("spinBtn"),
     resetWatchedBtn: document.getElementById("resetWatchedBtn"),
     onlyUnwatchedToggle: document.getElementById("onlyUnwatchedToggle"),
+    onlyFavoritesToggle: document.getElementById("onlyFavoritesToggle"),
+    hideSkippedTodayToggle: document.getElementById("hideSkippedTodayToggle"),
     genreFilter: document.getElementById("genreFilter"),
     decadeFilter: document.getElementById("decadeFilter"),
     resultTitle: document.getElementById("resultTitle"),
@@ -69,7 +77,10 @@
 
   function getIncludedShows() {
     return state.shows.filter((s) => {
-      if (state.onlyUnwatched && state.watched.has(String(s.id))) return false;
+      const id = String(s.id);
+      if (state.onlyUnwatched && state.watched.has(id)) return false;
+      if (state.onlyFavorites && !state.favorites.has(id)) return false;
+      if (state.hideSkippedToday && state.skippedToday.has(id)) return false;
       if (state.genreFilter !== "all") {
         const genres = Array.isArray(s.genre) ? s.genre.map(String) : [];
         if (!genres.includes(state.genreFilter)) return false;
@@ -194,6 +205,58 @@
     } catch {}
   }
 
+  function getTodayKey() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
+  function loadFavoritesFromStorage() {
+    try {
+      const raw = localStorage.getItem(FAVORITES_STORAGE_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return new Set(Array.isArray(arr) ? arr.map(String) : []);
+    } catch {
+      return new Set();
+    }
+  }
+
+  function saveFavoritesToStorage() {
+    try {
+      localStorage.setItem(
+        FAVORITES_STORAGE_KEY,
+        JSON.stringify([...state.favorites]),
+      );
+    } catch {}
+  }
+
+  function loadSkippedTodayFromStorage() {
+    try {
+      const raw = localStorage.getItem(SKIPPED_TODAY_STORAGE_KEY);
+      const obj = raw ? JSON.parse(raw) : {};
+      if (!obj || typeof obj !== "object") return new Set();
+      const today = getTodayKey();
+      return new Set(
+        Object.entries(obj)
+          .filter(([, date]) => String(date) === today)
+          .map(([id]) => String(id)),
+      );
+    } catch {
+      return new Set();
+    }
+  }
+
+  function saveSkippedTodayToStorage() {
+    try {
+      const today = getTodayKey();
+      const out = {};
+      for (const id of state.skippedToday) out[String(id)] = today;
+      localStorage.setItem(SKIPPED_TODAY_STORAGE_KEY, JSON.stringify(out));
+    } catch {}
+  }
+
   function loadShowsFromStorage() {
     try {
       const raw = localStorage.getItem(SHOWS_STORAGE_KEY);
@@ -259,6 +322,14 @@
       [...state.watched].filter((id) => existingIds.has(String(id))),
     );
     saveWatchedToStorage();
+    state.favorites = new Set(
+      [...state.favorites].filter((id) => existingIds.has(String(id))),
+    );
+    saveFavoritesToStorage();
+    state.skippedToday = new Set(
+      [...state.skippedToday].filter((id) => existingIds.has(String(id))),
+    );
+    saveSkippedTodayToStorage();
   }
 
   function refreshUIAfterShowsChange() {
@@ -295,6 +366,8 @@
         const d = Number(state.decadeFilter);
         parts.push(`dekada: ${d}-${d + 9}`);
       }
+      if (state.onlyFavorites) parts.push("tylko ulubione");
+      if (state.hideSkippedToday) parts.push("bez pominiętych dziś");
       dom.statusText.textContent = parts.join(" • ");
     }
   }
@@ -458,9 +531,11 @@
     for (const show of listShows) {
       const id = String(show.id);
       const watched = state.watched.has(id);
+      const favorite = state.favorites.has(id);
+      const skippedToday = state.skippedToday.has(id);
 
-      const row = document.createElement("label");
-      row.className = `item${watched ? " done" : ""}`;
+      const row = document.createElement("div");
+      row.className = `item${watched ? " done" : ""}${favorite ? " favorite" : ""}${skippedToday ? " skipped-today" : ""}`;
 
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
@@ -498,8 +573,45 @@
       year.className = "platform";
       year.textContent = String(show.year || "—");
 
+      const quickActions = document.createElement("div");
+      quickActions.className = "quick-actions";
+
+      const favoriteBtn = document.createElement("button");
+      favoriteBtn.type = "button";
+      favoriteBtn.className = `quick-action${favorite ? " active" : ""}`;
+      favoriteBtn.textContent = favorite ? "★ Ulubione" : "☆ Ulubione";
+      favoriteBtn.setAttribute("aria-label", `Przełącz ulubione: ${show.title}`);
+      favoriteBtn.addEventListener("click", () => {
+        if (state.favorites.has(id)) state.favorites.delete(id);
+        else state.favorites.add(id);
+        saveFavoritesToStorage();
+        renderShowsList();
+        updateCounts();
+        drawWheel();
+        updateSpinButtonState();
+      });
+
+      const skipBtn = document.createElement("button");
+      skipBtn.type = "button";
+      skipBtn.className = `quick-action${skippedToday ? " active" : ""}`;
+      skipBtn.textContent = skippedToday ? "Przywróć" : "Pomiń dziś";
+      skipBtn.setAttribute(
+        "aria-label",
+        `${skippedToday ? "Przywróć" : "Pomiń dziś"}: ${show.title}`,
+      );
+      skipBtn.addEventListener("click", () => {
+        if (state.skippedToday.has(id)) state.skippedToday.delete(id);
+        else state.skippedToday.add(id);
+        saveSkippedTodayToStorage();
+        renderShowsList();
+        updateCounts();
+        drawWheel();
+        updateSpinButtonState();
+      });
+
+      quickActions.append(favoriteBtn, skipBtn);
       main.append(title, subtitle);
-      row.append(checkbox, main, year);
+      row.append(checkbox, main, quickActions, year);
       dom.showsList.appendChild(row);
     }
   }
@@ -645,6 +757,8 @@
 
   async function init() {
     state.watched = loadWatchedFromStorage();
+    state.favorites = loadFavoritesFromStorage();
+    state.skippedToday = loadSkippedTodayFromStorage();
     const loaded = await loadShows();
     state.shows = normalizeShowsData(cloneShowsData(loaded.shows));
     try {
@@ -658,6 +772,20 @@
 
     dom.onlyUnwatchedToggle.addEventListener("change", () => {
       state.onlyUnwatched = dom.onlyUnwatchedToggle.checked;
+      renderShowsList();
+      updateCounts();
+      drawWheel();
+      updateSpinButtonState();
+    });
+    dom.onlyFavoritesToggle?.addEventListener("change", () => {
+      state.onlyFavorites = dom.onlyFavoritesToggle.checked;
+      renderShowsList();
+      updateCounts();
+      drawWheel();
+      updateSpinButtonState();
+    });
+    dom.hideSkippedTodayToggle?.addEventListener("change", () => {
+      state.hideSkippedToday = dom.hideSkippedTodayToggle.checked;
       renderShowsList();
       updateCounts();
       drawWheel();
@@ -744,6 +872,13 @@
     });
 
     window.addEventListener("resize", setupCanvasForDPR);
+
+    if (dom.onlyFavoritesToggle) {
+      dom.onlyFavoritesToggle.checked = state.onlyFavorites;
+    }
+    if (dom.hideSkippedTodayToggle) {
+      dom.hideSkippedTodayToggle.checked = state.hideSkippedToday;
+    }
 
     setEditorOpen(false);
     refreshUIAfterShowsChange();
