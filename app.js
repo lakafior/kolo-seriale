@@ -107,7 +107,21 @@
   }
 
   function getAvailableGenres() {
-    return [...CANONICAL_GENRES];
+    const sourceShows =
+      state.decadeFilter === "all"
+        ? state.shows
+        : state.shows.filter((s) => {
+            const year = Number(s.year);
+            const decade = Math.floor(year / 10) * 10;
+            return String(decade) === state.decadeFilter;
+          });
+
+    const genres = new Set();
+    for (const show of sourceShows) {
+      const genre = normalizeSingleGenre(show);
+      genres.add(genre);
+    }
+    return [...genres].sort((a, b) => a.localeCompare(b));
   }
 
   function normalizeSingleGenre(show) {
@@ -119,8 +133,15 @@
   }
 
   function getAvailableDecades() {
+    const sourceShows =
+      state.genreFilter === "all"
+        ? state.shows
+        : state.shows.filter(
+            (s) => normalizeSingleGenre(s) === state.genreFilter,
+          );
+
     const decades = new Set();
-    for (const show of state.shows) {
+    for (const show of sourceShows) {
       const year = Number(show.year);
       if (!Number.isInteger(year)) continue;
       decades.add(Math.floor(year / 10) * 10);
@@ -346,8 +367,9 @@
   }
 
   function updateCounts() {
-    const total = state.shows.length;
-    const remaining = state.shows.filter(
+    const filteredShows = getIncludedShows();
+    const total = filteredShows.length;
+    const remaining = filteredShows.filter(
       (s) => !state.watched.has(String(s.id)),
     ).length;
 
@@ -793,6 +815,8 @@
 
     dom.onlyUnwatchedToggle.addEventListener("change", () => {
       state.onlyUnwatched = dom.onlyUnwatchedToggle.checked;
+      renderDecadeFilter();
+      renderGenreFilter();
       renderShowsList();
       updateCounts();
       drawWheel();
@@ -800,6 +824,8 @@
     });
     dom.onlyFavoritesToggle?.addEventListener("change", () => {
       state.onlyFavorites = dom.onlyFavoritesToggle.checked;
+      renderDecadeFilter();
+      renderGenreFilter();
       renderShowsList();
       updateCounts();
       drawWheel();
@@ -807,6 +833,8 @@
     });
     dom.hideSkippedTodayToggle?.addEventListener("change", () => {
       state.hideSkippedToday = dom.hideSkippedTodayToggle.checked;
+      renderDecadeFilter();
+      renderGenreFilter();
       renderShowsList();
       updateCounts();
       drawWheel();
@@ -814,6 +842,7 @@
     });
     dom.genreFilter?.addEventListener("change", () => {
       state.genreFilter = dom.genreFilter.value || "all";
+      renderDecadeFilter();
       renderShowsList();
       updateCounts();
       drawWheel();
@@ -821,6 +850,7 @@
     });
     dom.decadeFilter?.addEventListener("change", () => {
       state.decadeFilter = dom.decadeFilter.value || "all";
+      renderGenreFilter();
       renderShowsList();
       updateCounts();
       drawWheel();
