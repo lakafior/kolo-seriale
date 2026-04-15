@@ -100,7 +100,9 @@
     const base = getIncludedShows();
     if (!query) return base;
     return base.filter((show) =>
-      String(show.title || "").toLocaleLowerCase("pl").includes(query),
+      String(show.title || "")
+        .toLocaleLowerCase("pl")
+        .includes(query),
     );
   }
 
@@ -567,7 +569,11 @@
 
       const subtitle = document.createElement("span");
       subtitle.className = "item-sub";
-      subtitle.textContent = where || "brak platformy";
+      const seasonInfo = show.seasons ? `Sezony: ${show.seasons}` : "";
+      const episodeInfo = show.episodes ? `Odcinki: ${show.episodes}` : "";
+      const platformInfo = where || "brak platformy";
+      const subParts = [platformInfo, seasonInfo, episodeInfo].filter(Boolean);
+      subtitle.textContent = subParts.join(" • ");
 
       const year = document.createElement("span");
       year.className = "platform";
@@ -580,7 +586,10 @@
       favoriteBtn.type = "button";
       favoriteBtn.className = `quick-action${favorite ? " active" : ""}`;
       favoriteBtn.textContent = favorite ? "★ Ulubione" : "☆ Ulubione";
-      favoriteBtn.setAttribute("aria-label", `Przełącz ulubione: ${show.title}`);
+      favoriteBtn.setAttribute(
+        "aria-label",
+        `Przełącz ulubione: ${show.title}`,
+      );
       favoriteBtn.addEventListener("click", () => {
         if (state.favorites.has(id)) state.favorites.delete(id);
         else state.favorites.add(id);
@@ -661,7 +670,9 @@
       removeBtn.className = "btn secondary manager-remove";
       removeBtn.textContent = "Usuń";
       removeBtn.addEventListener("click", () => {
-        state.shows = state.shows.filter((s) => String(s.id) !== String(show.id));
+        state.shows = state.shows.filter(
+          (s) => String(s.id) !== String(show.id),
+        );
         saveShowsToStorage(state.shows);
         refreshUIAfterShowsChange();
         setEditorStatus(`Usunięto: ${show.title}`);
@@ -682,7 +693,17 @@
       : show.genre || "brak danych";
 
     dom.resultTitle.textContent = show.title || "—";
-    dom.resultMeta.textContent = `${show.year || "—"} • ${genre} • ${where}`;
+
+    const seasonInfo = show.seasons ? `Sezony: ${show.seasons}` : "";
+    const episodeInfo = show.episodes ? `Odcinki: ${show.episodes}` : "";
+    const metaParts = [
+      String(show.year || "—"),
+      genre,
+      where,
+      seasonInfo,
+      episodeInfo,
+    ].filter(Boolean);
+    dom.resultMeta.textContent = metaParts.join(" • ");
     dom.resultDesc.textContent =
       show.description || show.notes || "Brak opisu.";
   }
