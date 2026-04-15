@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="pl">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Koło Seriali — Losuj co oglądać</title>
+        <meta
+            name="description"
+            content="Stylowa statyczna strona z kołem fortuny do losowania polskich seriali."
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <main class="app">
+            <section class="panel wheel-panel">
+                <header class="header">
+                    <div class="brand">
+                        <div class="brand-badge" aria-hidden="true">🎡</div>
+                        <div>
+                            <h1>Koło Seriali</h1>
+                            <p>Losuj polski serial na strima</p>
+                        </div>
+                    </div>
+                    <div class="controls-inline">
+                        <span class="chip"
+                            >Nieobejrzane:
+                            <strong id="remainingCount">0</strong></span
+                        >
+                        <span class="chip"
+                            >Wszystkie: <strong id="totalCount">0</strong></span
+                        >
+                    </div>
+                </header>
+
+                <div class="wheel-wrap">
+                    <div class="wheel-glow" aria-hidden="true"></div>
+                    <canvas
+                        id="wheelCanvas"
+                        class="wheel-canvas"
+                        width="720"
+                        height="720"
+                        aria-label="Koło fortuny z serialami"
+                    ></canvas>
+                    <div class="pointer" aria-hidden="true"></div>
+                    <div class="wheel-center" aria-hidden="true">SERIAL</div>
+                </div>
+
+                <div class="wheel-actions">
+                    <button id="spinBtn" class="btn big" type="button">
+                        Losuj
+                    </button>
+                    <button
+                        id="resetWatchedBtn"
+                        class="btn secondary"
+                        type="button"
+                    >
+                        Reset obejrzanych
+                    </button>
+                </div>
+
+                <p id="statusText" class="muted">
+                    Losowanie tylko z nieobejrzanych
+                </p>
+            </section>
+
+            <aside class="panel side-panel">
+                <section id="resultCard" class="result" aria-live="polite">
+                    <h2 id="resultTitle">Wylosuj serial</h2>
+                    <p id="resultMeta" class="result-meta">
+                        Rok • Gatunek • Gdzie obejrzeć
+                    </p>
+                    <p id="resultDesc">Kliknij „Losuj”, aby poznać wynik.</p>
+                </section>
+
+                <section class="filters">
+                    <h3>Filtry</h3>
+                    <label class="toggle" for="onlyUnwatchedToggle">
+                        <input
+                            type="checkbox"
+                            id="onlyUnwatchedToggle"
+                            checked
+                        />
+                        <span>Losuj tylko nieobejrzane</span>
+                    </label>
+                    <label class="filter-select" for="genreFilter">
+                        <span>Kategoria</span>
+                        <select id="genreFilter"></select>
+                    </label>
+                    <label class="filter-select" for="decadeFilter">
+                        <span>Dekada</span>
+                        <select id="decadeFilter"></select>
+                    </label>
+                </section>
+
+                <section class="watchlist">
+                    <h3>Lista seriali</h3>
+                    <div class="watchlist-toolbar">
+                        <label class="search" for="titleSearch">
+                            <input
+                                id="titleSearch"
+                                type="search"
+                                placeholder="Szukaj po tytule…"
+                                aria-label="Szukaj serialu po tytule"
+                            />
+                        </label>
+                    </div>
+                    <div
+                        id="showsList"
+                        class="list"
+                        aria-label="Lista seriali z oznaczeniem obejrzanych"
+                    ></div>
+                </section>
+
+                <button
+                    id="toggleEditorBtn"
+                    class="btn secondary"
+                    type="button"
+                >
+                    Edytuj listę seriali
+                </button>
+
+                <section id="showsManager" class="editor" hidden>
+                    <h3>Edycja listy (lokalnie)</h3>
+                    <p class="editor-note">
+                        Zmiany zapisują się lokalnie w tej przeglądarce.
+                    </p>
+
+                    <form id="addShowForm" class="editor-form">
+                        <input
+                            id="newShowTitle"
+                            class="editor-field"
+                            type="text"
+                            placeholder="Tytuł serialu"
+                            required
+                        />
+                        <input
+                            id="newShowYear"
+                            class="editor-field editor-field-year"
+                            type="number"
+                            min="1900"
+                            max="2100"
+                            placeholder="Rok"
+                            required
+                        />
+                        <input
+                            id="newShowWhere"
+                            class="editor-field"
+                            type="text"
+                            placeholder="Platformy, np. Netflix, Max"
+                        />
+                        <select id="newShowGenre" class="editor-field" required>
+                            <option value="komediowe">komediowe</option>
+                            <option value="paradokument">paradokument</option>
+                            <option value="na podstawie literatury">
+                                na podstawie literatury
+                            </option>
+                            <option value="przygodowe">przygodowe</option>
+                            <option value="sensacyjne">sensacyjne</option>
+                            <option value="fantastyczne">fantastyczne</option>
+                            <option value="opery mydlane">opery mydlane</option>
+                            <option value="obyczajowe" selected>obyczajowe</option>
+                        </select>
+                        <button class="btn secondary" type="submit">
+                            Dodaj serial
+                        </button>
+                    </form>
+
+                    <div id="managerList" class="manager-list"></div>
+
+                    <div class="editor-actions">
+                        <button
+                            id="resetShowsBtn"
+                            class="btn secondary"
+                            type="button"
+                        >
+                            Przywróć shows.json
+                        </button>
+                    </div>
+                    <p id="editorStatus" class="muted editor-status"></p>
+                </section>
+
+                <p class="footer-note">
+                    GitHub Pages nie zapisuje plików na serwerze. Edytor powyżej
+                    nadpisuje dane lokalnie w przeglądarce.
+                </p>
+            </aside>
+        </main>
+
+        <script type="module" src="app.js"></script>
+    </body>
+</html>
